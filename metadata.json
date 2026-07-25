@@ -1,0 +1,6 @@
+{
+  "name": "BibahoBondhon Matrimony Bangladesh",
+  "description": "Premium, secure, Facebook-style matrimonial platform for Bangladesh featuring verification, social timeline, matching, secure chat, and admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
