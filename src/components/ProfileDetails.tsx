@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Post, Story } from '../types';
 import { calculateMatchScore } from '../utils/matching';
 import { 
-  Heart, CheckCircle, ShieldAlert, Key, Phone, Users, MapPin, 
+  Heart, CheckCircle, ShieldAlert, ShieldCheck, Key, Phone, Users, MapPin, 
   MessageSquare, Briefcase, GraduationCap, Scale, Lock, Image as ImageIcon,
   Clock, Plus, Upload, UserCheck, ThumbsUp
 } from 'lucide-react';

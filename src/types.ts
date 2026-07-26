@@ -35,6 +35,7 @@ export interface User {
   district: string;
   mobileNumber: string;
   whatsappNumber: string;
+  password?: string;
   lookingFor: string;
   aboutYourself: string;
   partnerPreference: {
@@ -79,6 +80,7 @@ export interface Comment {
   userAvatar: string;
   content: string;
   timestamp: string;
+  replies?: Comment[];
 }
 
 export interface Post {
@@ -195,6 +197,7 @@ export interface ReportRecord {
   reportedUserId: string;
   reportedUserName: string;
   reportedUserProfileId: string;
+  reportedMobileNumber?: string;
   reasonPreset: string;
   additionalDetails?: string;
   screenshots: string[]; // array of base64 data URLs or uploaded photo links

@@ -191,8 +191,8 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
 
   const handleRegistrationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !dob || !education.trim() || !profession.trim() || !mobileNumber.trim() || !whatsappNumber.trim() || !email.trim() || !password.trim()) {
-      setFormError(language === 'en' ? 'Please fill in all required fields.' : 'দয়া করে সবগুলো প্রয়োজনীয় ক্ষেত্র পূরণ করুন।');
+    if (!fullName.trim() || !dob || !mobileNumber.trim() || !password.trim()) {
+      setFormError(language === 'en' ? 'Please fill in Name, DOB, Mobile Number and Password.' : 'দয়া করে আপনার নাম, জন্ম তারিখ, মোবাইল নম্বর এবং পাসওয়ার্ড প্রদান করুন।');
       return;
     }
     if (password !== confirmPassword) {
@@ -213,7 +213,7 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
       id: `user-${Date.now()}`,
       profileId,
       name: fullName,
-      email,
+      email: email.trim() || `${mobileNumber.trim()}@bibahobondhon.com`,
       gender,
       dob,
       age,
@@ -222,16 +222,17 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
       height,
       weight,
       bloodGroup,
-      education,
-      profession,
+      education: education.trim() || 'Graduate',
+      profession: profession.trim() || 'Private Service',
       monthlyIncome,
       fatherName,
       motherName,
       presentAddress,
       permanentAddress,
       district,
-      mobileNumber,
-      whatsappNumber,
+      mobileNumber: mobileNumber.trim(),
+      whatsappNumber: whatsappNumber.trim() || mobileNumber.trim(),
+      password: password.trim(),
       lookingFor: lookingFor || 'A suitable partner.',
       aboutYourself: aboutYourself || 'Family oriented individual.',
       partnerPreference: {
@@ -272,7 +273,7 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
       userMobile: mobileNumber,
       paymentTime: new Date().toISOString(),
       status: 'pending', // Set to pending to require admin manual approval
-      executiveReferralCode: execRefCode.trim().toUpperCase() || undefined,
+      executiveRefCode: execRefCode.trim().toUpperCase() || undefined,
       isIncompleteRegistration: false,
     };
 
@@ -899,7 +900,7 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
                                 profileId: `PENDING-${Math.floor(100000 + Math.random() * 900000)}`,
                                 paymentTime: new Date().toISOString(),
                                 status: 'pending',
-                                executiveReferralCode: execRefCode.trim().toUpperCase() || undefined,
+                                executiveRefCode: execRefCode.trim().toUpperCase() || undefined,
                                 isIncompleteRegistration: true,
                               });
                             }

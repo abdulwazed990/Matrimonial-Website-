@@ -16,6 +16,7 @@ interface HeaderProps {
   setIsAdminMode: (admin: boolean) => void;
   onOpenLoginModal?: () => void;
   unreadMessageCount?: number;
+  hasActiveExecutives?: boolean;
 }
 
 export default function Header({
@@ -32,6 +33,7 @@ export default function Header({
   setIsAdminMode,
   onOpenLoginModal,
   unreadMessageCount = 0,
+  hasActiveExecutives = true,
 }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -138,17 +140,19 @@ export default function Header({
                       </span>
                     )}
                   </button>
-                  <button
-                    onClick={() => setActiveTab('executives')}
-                    className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                      activeTab === 'executives'
-                        ? 'bg-neutral-900 text-white shadow-sm'
-                        : 'text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100'
-                    }`}
-                    id="nav-executives"
-                  >
-                    {text.executives}
-                  </button>
+                  {hasActiveExecutives && (
+                    <button
+                      onClick={() => setActiveTab('executives')}
+                      className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                        activeTab === 'executives'
+                          ? 'bg-neutral-900 text-white shadow-sm'
+                          : 'text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100'
+                      }`}
+                      id="nav-executives"
+                    >
+                      {text.executives}
+                    </button>
+                  )}
                 </>
               ) : activeTab === 'register' ? (
                 /* Pure registration header without Home or extraneous navigation */
@@ -325,21 +329,6 @@ export default function Header({
                           <Edit3 className="h-4 w-4" />
                         </div>
                         <span className="text-sm font-semibold">{language === 'en' ? 'Edit Profile' : 'Edit Profile'}</span>
-                      </button>
-
-                      {/* 2. Settings */}
-                      <button
-                        onClick={() => {
-                          setActiveTab('settings');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-neutral-800 hover:bg-neutral-100/80 transition-all cursor-pointer font-sans"
-                        id="menu-settings-btn"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-700">
-                          <Settings className="h-4 w-4" />
-                        </div>
-                        <span className="text-sm font-semibold">{language === 'en' ? 'Settings' : 'Settings'}</span>
                       </button>
 
                       {/* 3. Membership */}

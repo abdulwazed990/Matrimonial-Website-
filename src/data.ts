@@ -241,7 +241,9 @@ export const SAFETY_TIPS = [
   }
 ];
 
-export const SEED_USERS: User[] = [
+export const SEED_USERS: User[] = [];
+
+const REMOVED_SEED_USERS = [
   {
     id: 'user-1',
     profileId: 'BB-109283',
@@ -778,7 +780,8 @@ export const RELIGION_LIST = [
   'Islam (Sunni)', 'Islam (Shia)', 'Islam (Other)', 'Hinduism', 'Buddhism', 'Christianity'
 ];
 
-export const SEED_REPORTS: import('./types').ReportRecord[] = [
+export const SEED_REPORTS: import('./types').ReportRecord[] = [];
+const REMOVED_SEED_REPORTS = [
   {
     id: 'REP-1001',
     reporterId: 'usr-2',
@@ -788,6 +791,7 @@ export const SEED_REPORTS: import('./types').ReportRecord[] = [
     reportedUserId: 'usr-1',
     reportedUserName: 'তানভীর আহমেদ',
     reportedUserProfileId: 'BB-100101',
+    reportedMobileNumber: '01812345678',
     reasonPreset: 'ভুয়া বায়োডাটা / ফেক প্রোফাইল',
     additionalDetails: 'উনার বায়োডাটার শিক্ষাগত যোগ্যতা এবং পেশার তথ্য সঠিক মনে হচ্ছে না। মেসেজে অসামঞ্জস্যপূর্ণ কথা বলেছেন।',
     screenshots: [
@@ -806,6 +810,7 @@ export const SEED_REPORTS: import('./types').ReportRecord[] = [
     reportedUserId: 'usr-3',
     reportedUserName: 'রাশেদুল ইসলাম',
     reportedUserProfileId: 'BB-100303',
+    reportedMobileNumber: '01755443322',
     reasonPreset: 'অশোভন আচরণ বা অশালীন ভাষা',
     additionalDetails: 'ইনবক্সে অনুপযুক্ত ও অশালীন কথা বলেছেন। উপযুক্ত ব্যবস্থা নেয়ার অনুরোধ করছি।',
     screenshots: [
@@ -823,6 +828,25 @@ export const SEED_REPORTS: import('./types').ReportRecord[] = [
         timestamp: new Date(Date.now() - 43200000).toISOString(),
       }
     ],
+  },
+  {
+    id: 'REP-1003',
+    reporterId: 'usr-1',
+    reporterName: 'তানভীর আহমেদ',
+    reporterProfileId: 'BB-100101',
+    reporterMobileNumber: '01812345678',
+    reportedUserId: 'usr-5',
+    reportedUserName: 'জহির রায়হান',
+    reportedUserProfileId: 'BB-100505',
+    reportedMobileNumber: '01633221100',
+    reasonPreset: 'টাকা চাওয়া বা বাণিজ্যিক প্রতারণা',
+    additionalDetails: 'যোগাযোগের প্রথম দিনেই চিকিৎসার কথা বলে টাকা চেয়েছেন। এটি সন্দেহজনক প্রতারণামূলক আচরণ।',
+    screenshots: [
+      'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+    ],
+    timestamp: new Date(Date.now() - 172800000).toISOString(),
+    status: 'pending',
+    actionLogs: [],
   }
 ];
 

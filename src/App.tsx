@@ -8,8 +8,10 @@ import AdminDashboard from './components/AdminDashboard';
 import ExecutiveSection from './components/ExecutiveSection';
 import SearchMatches from './components/SearchMatches';
 import ProfileDetails from './components/ProfileDetails';
+import CreatePost from './components/CreatePost';
+import MobileNavBar from './components/MobileNavBar';
 
-import { User, Post, Story, PaymentRecord, ChatMessage, Executive, Notification, PackageType, Comment, ReportRecord, ReportActionLog } from './types';
+import { User, Post, Story, PaymentRecord, ChatMessage, Executive, Notification, PackageType, Comment, ReportRecord, ReportActionLog, MembershipPackage, UserStatus } from './types';
 import { SEED_USERS, SEED_POSTS, SEED_STORIES, SEED_EXECUTIVES, MEMBERSHIP_PACKAGES, SEED_REPORTS } from './data';
 import { AlertTriangle, Award, CheckCircle2, Heart, Key, PhoneCall, ShieldAlert, ShoppingBag, Star, HelpCircle, User as UserIcon } from 'lucide-react';
 
@@ -48,6 +50,7 @@ export default function App() {
   // User Login Modal States
   const [showUserLoginModal, setShowUserLoginModal] = useState(false);
   const [userLoginInput, setUserLoginInput] = useState('');
+  const [userLoginPasswordInput, setUserLoginPasswordInput] = useState('');
   const [userLoginError, setUserLoginError] = useState('');
 
   // Re-payment states for suspended users
@@ -292,7 +295,7 @@ export default function App() {
     saveToStorage('bb_posts', updated);
   };
 
-  const handleAddComment = (postId: string, commentText: string) => {
+  const handleAddComment = (postId: string, commentText: string, parentCommentId?: string) => {
     if (!currentUser) return;
     const updated = posts.map((p) => {
       if (p.id === postId) {
@@ -303,8 +306,23 @@ export default function App() {
           userAvatar: currentUser.profilePicture,
           content: commentText,
           timestamp: new Date().toISOString(),
+          replies: [],
         };
-        return { ...p, comments: [...p.comments, newComment] };
+
+        if (!parentCommentId) {
+          return { ...p, comments: [...p.comments, newComment] };
+        } else {
+          const updatedComments = p.comments.map((c) => {
+            if (c.id === parentCommentId) {
+              return {
+                ...c,
+                replies: [...(c.replies || []), newComment],
+              };
+            }
+            return c;
+          });
+          return { ...p, comments: updatedComments };
+        }
       }
       return p;
     });
@@ -590,6 +608,12 @@ export default function App() {
       return r;
     });
 
+    setReports(updatedReports);
+    saveToStorage('bb_reports', updatedReports);
+  };
+
+  const handleDeleteReport = (reportId: string) => {
+    const updatedReports = reports.filter((r) => r.id !== reportId);
     setReports(updatedReports);
     saveToStorage('bb_reports', updatedReports);
   };
@@ -1096,7 +1120,7 @@ export default function App() {
       )}
 
       {/* 3. Main Views router */}
-      <main className="flex-grow">
+      <main className="flex-grow pb-16 md:pb-0">
         
         {/* If target user selected -> render facebook style Profile Details */}
         {selectedProfile ? (
@@ -1149,6 +1173,15 @@ export default function App() {
               />
             )}
 
+            {activeTab === 'create-post' && (
+              <CreatePost
+                language={language}
+                currentUser={currentUser}
+                onAddPost={handleAddPost}
+                onCancel={() => setActiveTab('feed')}
+              />
+            )}
+
             {activeTab === 'feed' && (
               <Timeline
                 language={language}
@@ -1173,6 +1206,8 @@ export default function App() {
                 }}
                 onOpenDirectChat={handleOpenDirectChat}
                 onUploadToGallery={handleUploadToGallery}
+                onOpenCreatePost={() => setActiveTab('create-post')}
+                setActiveTab={setActiveTab}
               />
             )}
 
@@ -1198,6 +1233,7 @@ export default function App() {
                 onBlockUser={handleBlockUser}
                 blockedUsers={blockedUsers}
                 onOpenUpgradeModal={() => setActiveTab('pricing')}
+                onSelectProfile={(user) => setSelectedProfile(user)}
               />
             )}
 
@@ -1229,6 +1265,7 @@ export default function App() {
                 onDeleteExecutive={handleDeleteExecutive}
                 onToggleExecutiveStatus={handleToggleExecutiveStatus}
                 onResolveReport={handleResolveReport}
+                onDeleteReport={handleDeleteReport}
               />
             )}
 
@@ -1345,35 +1382,59 @@ export default function App() {
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
-                const matched = users.find(u => u.mobileNumber === userLoginInput.trim() || u.id === userLoginInput.trim());
-                if (matched) {
-                  setCurrentUser(matched);
-                  setActiveTab('feed'); // Redirects directly to Timeline Feed!
-                  setShowUserLoginModal(false);
-                  setUserLoginInput('');
-                  setUserLoginError('');
-                } else if (users.length > 0) {
-                  // Fallback to first user if number not matched
-                  setCurrentUser(users[0]);
-                  setActiveTab('feed');
-                  setShowUserLoginModal(false);
-                  setUserLoginInput('');
-                  setUserLoginError('');
-                } else {
-                  setUserLoginError(language === 'en' ? 'User not found' : 'সদস্য খুঁজে পাওয়া যায়নি');
+                const mobile = userLoginInput.trim();
+                const pass = userLoginPasswordInput.trim();
+
+                if (!mobile || !pass) {
+                  setUserLoginError(language === 'en' ? 'Both Mobile Number and Password are required.' : 'মোবাইল নম্বর ও পাসওয়ার্ড উভয়ই প্রদান করা বাধ্যতামূলক।');
+                  return;
                 }
+
+                const matched = users.find(u => u.mobileNumber === mobile || u.profileId === mobile || u.id === mobile);
+                if (!matched) {
+                  setUserLoginError(language === 'en' ? 'Account not found with this mobile number.' : 'এই মোবাইল নম্বরে কোনো অ্যাকাউন্ট পাওয়া যায়নি।');
+                  return;
+                }
+
+                if (matched.password && matched.password !== pass) {
+                  setUserLoginError(language === 'en' ? 'Invalid Mobile Number or Password.' : 'মোবাইল নম্বর বা পাসওয়ার্ড ভুল হয়েছে।');
+                  return;
+                }
+
+                setCurrentUser(matched);
+                if (matched.status !== 'suspended') {
+                  setActiveTab('feed');
+                }
+                setShowUserLoginModal(false);
+                setUserLoginInput('');
+                setUserLoginPasswordInput('');
+                setUserLoginError('');
               }}
               className="space-y-3"
             >
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-neutral-500 uppercase block font-mono">Mobile Number / User ID</label>
+                <label className="text-[11px] font-bold text-neutral-500 uppercase block font-mono">Mobile Number / User ID *</label>
                 <input
                   type="text"
+                  required
                   placeholder="017XXXXXXXX"
                   value={userLoginInput}
                   onChange={(e) => setUserLoginInput(e.target.value)}
                   className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono"
                   id="user-login-mobile-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-neutral-500 uppercase block font-mono">Password *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={userLoginPasswordInput}
+                  onChange={(e) => setUserLoginPasswordInput(e.target.value)}
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-red-700 focus:bg-white font-mono"
+                  id="user-login-password-input"
                 />
               </div>
 
@@ -1641,11 +1702,11 @@ export default function App() {
                   <span className="text-amber-400 font-bold">ফি: ৳{rePayPackage.price}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-extrabold text-white">01700000000</span>
+                  <span className="text-sm font-extrabold text-white">01340772478</span>
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText('01700000000');
+                      navigator.clipboard.writeText('01340772478');
                       setCopiedRePayNumber(true);
                       setTimeout(() => setCopiedRePayNumber(false), 2000);
                     }}
@@ -1718,17 +1779,14 @@ export default function App() {
                     profileId: currentUser.profileId,
                     userMobile: currentUser.mobileNumber,
                     userName: currentUser.name,
-                    userGender: currentUser.gender,
-                    userAge: currentUser.age,
-                    userDistrict: currentUser.district,
                     paymentMethod: rePayMethod,
                     transactionId: rePayTxId.trim().toUpperCase(),
                     membershipPackage: rePayPackage.id,
                     amount: rePayPackage.price,
                     status: 'pending',
-                    timestamp: new Date().toISOString(),
+                    paymentTime: new Date().toISOString(),
                     isIncompleteRegistration: false,
-                    executiveReferenceCode: rePayExecCode.trim() || undefined,
+                    executiveRefCode: rePayExecCode.trim() || undefined,
                   };
 
                   // 1. Add to payments
@@ -1765,6 +1823,16 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Persistent Mobile Bottom Navigation Bar */}
+      <MobileNavBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUser={currentUser}
+        unreadMessageCount={unreadMessageCount}
+        language={language}
+        isAdminMode={isAdminMode}
+      />
 
     </div>
   );

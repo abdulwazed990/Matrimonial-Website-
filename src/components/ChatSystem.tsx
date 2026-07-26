@@ -18,6 +18,7 @@ interface ChatSystemProps {
   onBlockUser: (blockedUserId: string) => void;
   blockedUsers: string[];
   onOpenUpgradeModal?: () => void;
+  onSelectProfile?: (user: User) => void;
 }
 
 const EMOJI_LIST = ['😊', '😂', '❤️', '👰', '🤵', '💍', '💐', '😍', '💖', '👋', '👍', '🙏', '✨', '🌸', '🌹', '🕊️', '🤲', '💯', '🔥', '💬'];
@@ -34,6 +35,7 @@ export default function ChatSystem({
   onBlockUser,
   blockedUsers,
   onOpenUpgradeModal,
+  onSelectProfile,
 }: ChatSystemProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [inputMessage, setInputMessage] = useState('');
@@ -292,22 +294,28 @@ export default function ChatSystem({
                     <ArrowLeft className="h-5 w-5" />
                   </button>
 
-                  <div className="relative shrink-0">
-                    <img
-                      src={selectedUser.profilePicture}
-                      alt={selectedUser.name}
-                      className="w-10 h-10 rounded-full object-cover border border-neutral-200"
-                      referrerPolicy="no-referrer"
-                    />
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
-                  </div>
+                  <div 
+                    onClick={() => onSelectProfile && selectedUser && onSelectProfile(selectedUser)}
+                    className="flex items-center space-x-3 min-w-0 cursor-pointer group hover:opacity-90 transition-opacity"
+                    title={language === 'en' ? 'Click to view full profile' : 'সম্পূর্ণ প্রোফাইল দেখতে ক্লিক করুন'}
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={selectedUser.profilePicture}
+                        alt={selectedUser.name}
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 ring-2 ring-transparent group-hover:ring-red-600 transition-all"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    </div>
 
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-neutral-900 text-sm font-serif truncate">{selectedUser.name}</h4>
-                    <div className="flex items-center space-x-1 text-[10px] font-mono">
-                      <span className="text-emerald-700 font-bold">● অনলাইনে আছেন</span>
-                      <span className="text-neutral-300">•</span>
-                      <span className="text-neutral-500 truncate">{selectedUser.profileId}</span>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-neutral-900 text-sm font-serif truncate group-hover:text-red-700 transition-colors">{selectedUser.name}</h4>
+                      <div className="flex items-center space-x-1 text-[10px] font-mono">
+                        <span className="text-emerald-700 font-bold">● অনলাইনে আছেন</span>
+                        <span className="text-neutral-300">•</span>
+                        <span className="text-neutral-500 truncate">{selectedUser.profileId}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
