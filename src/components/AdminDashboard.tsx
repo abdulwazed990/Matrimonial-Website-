@@ -201,6 +201,15 @@ export default function AdminDashboard({
       return;
     }
 
+    const normalizedRefCode = formRefCode.trim().toUpperCase();
+    const duplicate = executives.find(
+      e => e.referenceCode.toUpperCase() === normalizedRefCode && e.id !== editingExec?.id
+    );
+    if (duplicate) {
+      setFormError(`রেফারেন্স কোড "${normalizedRefCode}" ইতিমধ্যে "${duplicate.name}" এর জন্য ব্যবহৃত হচ্ছে। আলাদা ইউনিক কোড দিন।`);
+      return;
+    }
+
     const execData: Executive = {
       id: editingExec ? editingExec.id : `exec-${Date.now()}`,
       name: formName.trim(),
@@ -209,7 +218,7 @@ export default function AdminDashboard({
       mobileNumber: formMobile.trim() || formWhatsapp.trim(),
       whatsappNumber: formWhatsapp.trim(),
       email: formEmail.trim() || undefined,
-      referenceCode: formRefCode.trim().toUpperCase(),
+      referenceCode: normalizedRefCode,
       officeLocation: formOffice.trim() || undefined,
       joiningDate: formJoiningDate,
       isActive: formIsActive,
@@ -231,7 +240,22 @@ export default function AdminDashboard({
     return matchesTx && matchesProfile;
   });
 
-  const currentSelectedExec = executives.find(e => e.referenceCode === selectedExecForPerf) || executives[0];
+  const allRecordedExecCodes = Array.from(new Set([
+    ...executives.map(e => e.referenceCode),
+    ...users.map(u => u.executiveReferenceCode).filter(c => c && c !== 'SYSTEM' && c.trim() !== '') as string[]
+  ]));
+
+  const currentSelectedExec = executives.find(e => e.referenceCode === selectedExecForPerf) || (
+    selectedExecForPerf ? {
+      id: `archived-${selectedExecForPerf}`,
+      name: `Archived Code (${selectedExecForPerf})`,
+      designation: 'Former Executive Code',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+      whatsappNumber: 'N/A',
+      referenceCode: selectedExecForPerf,
+      isActive: false
+    } : executives[0]
+  );
   const selectedExecUsers = currentSelectedExec 
     ? users.filter(u => u.executiveReferenceCode === currentSelectedExec.referenceCode)
     : [];
@@ -796,42 +820,89 @@ export default function AdminDashboard({
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-neutral-100">
                 <div>
                   <h4 className="text-base font-bold font-serif text-neutral-900">
-                    {currentSelectedExec.name} ({currentSelectedExec.referenceCode})-এর নিবন্ধিত গ্রাহকগণ ({selectedExecUsers.length} জন)
+                    {currentSelectedExec.name} ({currentSelectedExec.referenceCode})-এর নিবন্ধিত গ্রাহক পারফরম্যান্স ইতিহাস ({selectedExecUsers.length} জন)
                   </h4>
+                  <p className="text-xs text-neutral-500 font-mono">
+                    রেফারেন্স কোড ব্যবহার করে সফলভাবে নিবন্ধিত সকল গ্রাহকদের বিস্তারিত তথ্য।
+                  </p>
                 </div>
                 <select
-                  value={selectedExecForPerf}
+                  value={selectedExecForPerf || currentSelectedExec.referenceCode}
                   onChange={(e) => setSelectedExecForPerf(e.target.value)}
-                  className="bg-neutral-50 border border-neutral-300 text-neutral-900 text-xs rounded-xl px-3 py-1.5 font-mono font-bold focus:outline-none focus:border-red-700 w-full sm:w-auto"
+                  className="bg-neutral-50 border border-neutral-300 text-neutral-900 text-xs rounded-xl px-3 py-1.5 font-mono font-bold focus:outline-none focus:border-red-700 w-full sm:w-auto cursor-pointer"
                 >
-                  {executives.map(exec => (
-                    <option key={exec.id} value={exec.referenceCode}>
-                      {exec.name} ({exec.referenceCode})
-                    </option>
-                  ))}
+                  <optgroup label="সক্রিয় এক্সিকিউটিভবৃন্দ">
+                    {executives.map(exec => (
+                      <option key={exec.id} value={exec.referenceCode}>
+                        {exec.name} ({exec.referenceCode})
+                      </option>
+                    ))}
+                  </optgroup>
+                  {allRecordedExecCodes.filter(c => !executives.some(e => e.referenceCode === c)).length > 0 && (
+                    <optgroup label="আর্কাইভড / সাবেক রেফারেল কোড">
+                      {allRecordedExecCodes.filter(c => !executives.some(e => e.referenceCode === c)).map(code => (
+                        <option key={code} value={code}>
+                          Archived Code ({code})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
               {selectedExecUsers.length === 0 ? (
-                <p className="text-xs text-neutral-500 italic py-4 text-center">কোনো কাস্টমার এই রেফারেন্স কোডে নেই।</p>
+                <p className="text-xs text-neutral-500 italic py-6 text-center font-mono">কোনো কাস্টমার এই রেফারেন্স কোডে নিবন্ধিত হয়নি।</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {selectedExecUsers.map(u => (
-                    <div key={u.id} className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl flex items-center justify-between text-xs font-mono">
-                      <div className="flex items-center space-x-2 truncate">
-                        <img src={u.profilePicture} alt={u.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
-                        <div className="truncate">
-                          <span className="font-bold text-neutral-900 font-sans block truncate">{u.name}</span>
-                          <span className="text-[10px] text-neutral-500">{u.profileId} • {u.packageId.toUpperCase()}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {selectedExecUsers.map(u => {
+                    const userPayment = payments.find(p => p.profileId === u.profileId);
+                    const rawDate = u.registrationDate || u.registeredDate;
+                    const formattedRegDate = rawDate
+                      ? new Date(rawDate).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' })
+                      : 'প্রযোজ্য নয়';
+                    
+                    const isVerified = u.status === 'verified' || userPayment?.status === 'approved';
+
+                    return (
+                      <div key={u.id} className="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl space-y-3 hover:border-red-300 transition-all text-xs font-mono">
+                        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-neutral-200/80">
+                          <div className="flex items-center space-x-3">
+                            <img src={u.profilePicture} alt={u.name} className="h-10 w-10 rounded-full object-cover border border-neutral-300 shrink-0" />
+                            <div>
+                              <strong className="text-sm font-extrabold text-neutral-900 font-sans block leading-tight">{u.name}</strong>
+                              <span className="text-[11px] font-bold text-red-800 font-mono block mt-0.5">বায়োডাটা নং (ID): {u.profileId}</span>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            isVerified ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {isVerified ? '✓ ভেরিফাইড (অনুমোদিত)' : '⏳ পেন্ডিং'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-0.5">
+                          <div>
+                            <span className="text-neutral-500 block">মোবাইল নম্বর:</span>
+                            <span className="font-bold text-neutral-800">{u.mobileNumber}</span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-500 block">নির্বাচিত প্যাকেজ:</span>
+                            <span className="font-bold text-red-900 uppercase">{u.packageId}</span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-500 block">নিবন্ধন তারিখ ও সময়:</span>
+                            <span className="font-medium text-neutral-800">{formattedRegDate}</span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-500 block">ব্যবহৃত রেফারেল কোড:</span>
+                            <span className="font-bold text-red-800 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded inline-block mt-0.5">
+                              {u.executiveReferenceCode || currentSelectedExec.referenceCode}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        u.status === 'verified' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {u.status}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1153,6 +1153,7 @@ export default function App() {
                 onSelectProfile={(user) => setSelectedProfile(user)}
                 currentUser={currentUser}
                 users={users}
+                executives={executives}
                 onQuickRegister={(num) => {
                   setInitialMobileNumber(num);
                   setActiveTab('register');
@@ -1170,6 +1171,7 @@ export default function App() {
                 onSavePendingPayment={handleSavePendingPayment}
                 initialPackageId={selectedPackage?.id}
                 initialMobileNumber={initialMobileNumber}
+                executives={executives}
               />
             )}
 

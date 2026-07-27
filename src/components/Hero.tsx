@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SUCCESS_STORIES, SEED_EXECUTIVES, DISTRICT_LIST, RELIGION_LIST } from '../data';
-import { User } from '../types';
+import { SUCCESS_STORIES, DISTRICT_LIST, RELIGION_LIST } from '../data';
+import { User, Executive } from '../types';
 import { 
   Heart, 
   Search, 
@@ -37,6 +37,7 @@ interface HeroProps {
   onSelectProfile: (user: User) => void;
   currentUser?: User | null;
   users?: User[];
+  executives?: Executive[];
   onQuickRegister?: (mobileNumber: string) => void;
   onOpenAdminLoginModal?: () => void;
 }
@@ -356,9 +357,11 @@ export default function Hero({
   onSelectProfile,
   currentUser,
   users = [],
+  executives = [],
   onQuickRegister,
   onOpenAdminLoginModal,
 }: HeroProps) {
+  const activeExecutives = executives.filter(e => e.isActive);
   // Search states (For logged-in users)
   const [searchGender, setSearchGender] = useState('Bride');
   const [searchReligion, setSearchReligion] = useState('');
@@ -1006,46 +1009,64 @@ export default function Hero({
           <div className="h-1 w-16 bg-amber-400 mx-auto rounded-full mt-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {SEED_EXECUTIVES.filter(e => e.isActive).slice(0, 3).map((exec) => (
-            <div 
-              key={exec.id} 
-              className="bg-white border border-neutral-200/60 rounded-3xl p-6 shadow-xs text-center flex flex-col justify-between items-center group hover:border-red-200 hover:shadow-md transition-all duration-300"
-              id={`exec-card-landing-${exec.id}`}
-            >
-              <div className="space-y-4 mb-6">
-                <div className="relative inline-block">
-                  <SafeImage 
-                    src={exec.photo} 
-                    alt={exec.name} 
-                    fallbackText={exec.name}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-neutral-100 group-hover:border-rose-100 transition-colors duration-300 shadow-sm mx-auto"
-                  />
-                  <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on WhatsApp" />
-                </div>
-                <div>
-                  <h4 className="text-base sm:text-lg font-black text-neutral-900 font-serif">{translateNameToBangla(exec.name)}</h4>
-                  <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-rose-100 px-3 py-0.5 rounded-full inline-block mt-1 font-mono">
-                    {exec.designation}
-                  </span>
-                </div>
-                <p className="text-xs text-neutral-600 italic max-w-xs leading-relaxed font-medium">
-                  "{exec.bio}"
-                </p>
-              </div>
-
-              <a 
-                href={`https://wa.me/${exec.whatsappNumber.replace(/[^0-9]/g, '')}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold uppercase rounded-2xl shadow-sm transition-all duration-200 flex items-center justify-center space-x-2 border border-emerald-600 font-mono"
+        {activeExecutives.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-3xl border border-neutral-200/60 p-8 shadow-xs max-w-md mx-auto">
+            <Users className="h-10 w-10 text-neutral-300 mx-auto mb-3" />
+            <p className="text-sm text-neutral-500 font-bold">বর্তমানে কোনো সক্রিয় উপদেষ্টা নেই।</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {activeExecutives.map((exec) => (
+              <div 
+                key={exec.id} 
+                className="bg-white border border-neutral-200/60 rounded-3xl p-6 shadow-xs text-center flex flex-col justify-between items-center group hover:border-red-200 hover:shadow-md transition-all duration-300"
+                id={`exec-card-landing-${exec.id}`}
               >
-                <PhoneCall className="h-4 w-4 text-white" />
-                <span>WhatsApp এ যোগাযোগ করুন</span>
-              </a>
-            </div>
-          ))}
-        </div>
+                <div className="space-y-4 mb-6 w-full">
+                  <div className="relative inline-block">
+                    <SafeImage 
+                      src={exec.photo} 
+                      alt={exec.name} 
+                      fallbackText={exec.name}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-neutral-100 group-hover:border-rose-100 transition-colors duration-300 shadow-sm mx-auto"
+                    />
+                    <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" title="Active on WhatsApp" />
+                  </div>
+                  <div>
+                    <h4 className="text-base sm:text-lg font-black text-neutral-900 font-serif">{translateNameToBangla(exec.name)}</h4>
+                    <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-rose-100 px-3 py-0.5 rounded-full inline-block mt-1 font-mono">
+                      {exec.designation}
+                    </span>
+                    {exec.referenceCode && (
+                      <span className="block text-[10px] text-neutral-400 font-mono mt-1 font-bold">
+                        Ref: {exec.referenceCode}
+                      </span>
+                    )}
+                  </div>
+                  {exec.bio ? (
+                    <p className="text-xs text-neutral-600 italic max-w-xs leading-relaxed font-medium mx-auto">
+                      "{exec.bio}"
+                    </p>
+                  ) : exec.officeLocation ? (
+                    <p className="text-xs text-neutral-500 max-w-xs leading-relaxed font-medium mx-auto">
+                      📍 {exec.officeLocation}
+                    </p>
+                  ) : null}
+                </div>
+
+                <a 
+                  href={`https://wa.me/${exec.whatsappNumber.replace(/[^0-9]/g, '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold uppercase rounded-2xl shadow-sm transition-all duration-200 flex items-center justify-center space-x-2 border border-emerald-600 font-mono"
+                >
+                  <PhoneCall className="h-4 w-4 text-white" />
+                  <span>WhatsApp এ যোগাযোগ করুন</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ======================================================== */}

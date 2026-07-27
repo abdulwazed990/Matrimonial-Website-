@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User, PackageType, PaymentRecord } from '../types';
-import { MEMBERSHIP_PACKAGES, DISTRICT_LIST, RELIGION_LIST, SEED_EXECUTIVES } from '../data';
+import { User, Executive, PackageType, PaymentRecord } from '../types';
+import { MEMBERSHIP_PACKAGES, DISTRICT_LIST, RELIGION_LIST } from '../data';
 import { ShieldCheck, CreditCard, UserPlus, CheckCircle2, AlertTriangle, Image as ImageIcon, Plus, ArrowRight, ArrowLeft, Copy, Check, Smartphone, Flame, Upload, Trash2, Camera } from 'lucide-react';
 
 interface RegistrationFlowProps {
@@ -9,9 +9,10 @@ interface RegistrationFlowProps {
   onSavePendingPayment?: (payment: PaymentRecord) => void;
   initialPackageId?: string;
   initialMobileNumber?: string;
+  executives?: Executive[];
 }
 
-export default function RegistrationFlow({ language, onRegisterComplete, onSavePendingPayment, initialPackageId, initialMobileNumber }: RegistrationFlowProps) {
+export default function RegistrationFlow({ language, onRegisterComplete, onSavePendingPayment, initialPackageId, initialMobileNumber, executives = [] }: RegistrationFlowProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Package, 2: Payment Gateway, 3: Success, 4: Registration Form
   
   // Registration success popup modal state
@@ -94,11 +95,11 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
   const handleOpenGatewayModal = (method: 'bKash' | 'Nagad' | 'Rocket') => {
     const code = execRefCode.trim().toUpperCase();
     if (code) {
-      const matched = SEED_EXECUTIVES.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
+      const matched = executives.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
       if (!matched) {
         alert(language === 'en'
-          ? 'Invalid Executive Referral Code! Please enter a valid code (e.g. WAZED990, RAHIM102, AKASH501, TANIA220) or clear the field.'
-          : 'অকার্যকর রেফারেল কোড! অনুগ্রহ করে সঠিক এক্সিকিউটিভ কোড লিখুন (যেমন: WAZED990, RAHIM102, AKASH501, TANIA220) অথবা ফিল্ডটি ফাঁকা রাখুন।');
+          ? 'Invalid Executive Referral Code! Please enter a valid executive code or clear the field.'
+          : 'অকার্যকর রেফারেল কোড! অনুগ্রহ করে সঠিক এক্সিকিউটিভ কোড লিখুন অথবা ফিল্ডটি ফাঁকা রাখুন।');
         return;
       }
     }
@@ -198,6 +199,17 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
     if (password !== confirmPassword) {
       setFormError(language === 'en' ? 'Passwords do not match.' : 'পাসওয়ার্ড দুটি মেলেনি।');
       return;
+    }
+
+    const code = execRefCode.trim().toUpperCase();
+    if (code) {
+      const matched = executives.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
+      if (!matched) {
+        setFormError(language === 'en'
+          ? `Invalid Executive Referral Code "${code}"! Please enter a valid active referral code or leave it blank.`
+          : `অকার্যকর এক্সিকিউটিভ রেফারেন্স নম্বর "${code}"! অনুগ্রহ করে একটি সঠিক ও সক্রিয় এক্সিকিউটিভ রেফারেন্স কোড দিন অথবা ফাঁকা রাখুন।`);
+        return;
+      }
     }
 
     setFormError('');
@@ -750,7 +762,7 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
                       {/* Executive Referral Code Input Box Inside Modal */}
                       {(() => {
                         const code = execRefCode.trim().toUpperCase();
-                        const matchedExec = SEED_EXECUTIVES.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
+                        const matchedExec = executives.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
 
                         return (
                           <div className="bg-white/10 border border-white/20 rounded-xl p-3 space-y-2">
@@ -860,11 +872,11 @@ export default function RegistrationFlow({ language, onRegisterComplete, onSaveP
                         onClick={() => {
                           const code = execRefCode.trim().toUpperCase();
                           if (code) {
-                            const matched = SEED_EXECUTIVES.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
+                            const matched = executives.find(e => e.isActive && e.referenceCode.toUpperCase() === code);
                             if (!matched) {
                               setPaymentError(language === 'en'
-                                ? 'Invalid Executive Referral Code! Please enter a valid code (e.g. WAZED990, RAHIM102, AKASH501, TANIA220) or clear it.'
-                                : 'অকার্যকর এক্সিকিউটিভ রেফারেল কোড! অনুগ্রহ করে সঠিক রেফারেল কোড দিন (যেমন: WAZED990, RAHIM102, AKASH501, TANIA220) অথবা ফিল্ডটি ফাঁকা রাখুন।');
+                                ? 'Invalid Executive Referral Code! Please enter a valid executive code or clear it.'
+                                : 'অকার্যকর এক্সিকিউটিভ রেফারেল কোড! অনুগ্রহ করে সঠিক রেফারেল কোড দিন অথবা ফিল্ডটি ফাঁকা রাখুন।');
                               return;
                             }
                           }
