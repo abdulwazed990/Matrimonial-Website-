@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "Registered user accounts, matrimony profiles, credentials, and verification status"
+    },
+    "posts": {
+      "title": "Community Posts",
+      "description": "Wall posts, images, likes, and comments"
+    },
+    "stories": {
+      "title": "User Stories",
+      "description": "User stories and reactions"
+    },
+    "executives": {
+      "title": "Executives",
+      "description": "Field executive profiles, referral codes, and performance data"
+    },
+    "payments": {
+      "title": "Payment Records",
+      "description": "Payment verification queue, bKash/Nagad transactions, and history"
+    },
+    "reports": {
+      "title": "Report Records",
+      "description": "User flags, reports, and administrative audit logs"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "User alerts and notifications"
+    },
+    "chats": {
+      "title": "Chat Messages",
+      "description": "Direct chat messages between users"
+    },
+    "settings": {
+      "title": "System Settings",
+      "description": "Global app configuration, pricing, and settings"
+    }
+  }
+}

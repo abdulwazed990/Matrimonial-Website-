@@ -15,6 +15,31 @@ import AutoUpdateChecker from './components/AutoUpdateChecker';
 import { User, Post, Story, PaymentRecord, ChatMessage, Executive, Notification, PackageType, Comment, ReportRecord, ReportActionLog, MembershipPackage, UserStatus } from './types';
 import { SEED_USERS, SEED_POSTS, SEED_STORIES, SEED_EXECUTIVES, MEMBERSHIP_PACKAGES, SEED_REPORTS } from './data';
 import { AlertTriangle, Award, CheckCircle2, Heart, Key, PhoneCall, ShieldAlert, ShoppingBag, Star, HelpCircle, User as UserIcon } from 'lucide-react';
+import {
+  seedInitialFirestoreData,
+  subscribeUsers,
+  subscribePosts,
+  subscribeStories,
+  subscribeExecutives,
+  subscribePayments,
+  subscribeReports,
+  subscribeNotifications,
+  subscribeChats,
+  saveUserInFirestore,
+  deleteUserInFirestore,
+  savePostInFirestore,
+  deletePostInFirestore,
+  saveStoryInFirestore,
+  deleteStoryInFirestore,
+  saveExecutiveInFirestore,
+  deleteExecutiveInFirestore,
+  savePaymentInFirestore,
+  deletePaymentInFirestore,
+  saveReportInFirestore,
+  deleteReportInFirestore,
+  saveNotificationInFirestore,
+  saveChatMessageInFirestore
+} from './lib/firebaseService';
 
 export default function App() {
   // --------------------------------------------------
@@ -63,44 +88,75 @@ export default function App() {
   const [rePayError, setRePayError] = useState('');
   const [copiedRePayNumber, setCopiedRePayNumber] = useState(false);
 
-  // Initialize data from LocalStorage or seed defaults
+  // Initialize Firebase Cloud Database & Real-time Subscriptions
   useEffect(() => {
-    const localUsers = localStorage.getItem('bb_users');
-    const localPosts = localStorage.getItem('bb_posts');
-    const localStories = localStorage.getItem('bb_stories');
-    const localPayments = localStorage.getItem('bb_payments');
-    const localMessages = localStorage.getItem('bb_messages');
-    const localExecutives = localStorage.getItem('bb_executives');
-    const localNotifications = localStorage.getItem('bb_notifications');
-    const localReports = localStorage.getItem('bb_reports');
+    // 1. Seed initial data if Firestore collections are empty
+    seedInitialFirestoreData();
 
-    const loadedUsers = localUsers ? JSON.parse(localUsers) : SEED_USERS;
-    const loadedPosts = localPosts ? JSON.parse(localPosts) : SEED_POSTS;
-    const loadedStories = localStories ? JSON.parse(localStories) : SEED_STORIES;
-    const loadedPayments = localPayments ? JSON.parse(localPayments) : [];
-    const loadedMessages = localMessages ? JSON.parse(localMessages) : [];
-    const loadedExecutives = localExecutives ? JSON.parse(localExecutives) : SEED_EXECUTIVES;
-    const loadedNotifications = localNotifications ? JSON.parse(localNotifications) : [];
-    const parsedReports = localReports ? JSON.parse(localReports) : [];
-    const loadedReports = (parsedReports && parsedReports.length > 0) ? parsedReports : SEED_REPORTS;
+    // 2. Subscribe to Firebase Users collection
+    const unsubUsers = subscribeUsers((firestoreUsers) => {
+      setUsers(firestoreUsers);
+      saveToStorage('bb_users', firestoreUsers);
+      // Keep active session user synced
+      setCurrentUser((prev) => {
+        if (!prev) return null;
+        const updated = firestoreUsers.find((u) => u.id === prev.id || u.profileId === prev.profileId);
+        return updated || prev;
+      });
+    });
 
-    if (!localUsers) saveToStorage('bb_users', SEED_USERS);
-    if (!localPosts) saveToStorage('bb_posts', SEED_POSTS);
-    if (!localStories) saveToStorage('bb_stories', SEED_STORIES);
-    if (!localExecutives) saveToStorage('bb_executives', SEED_EXECUTIVES);
-    if (!localReports || parsedReports.length === 0) saveToStorage('bb_reports', SEED_REPORTS);
+    // 3. Subscribe to Posts
+    const unsubPosts = subscribePosts((firestorePosts) => {
+      setPosts(firestorePosts);
+      saveToStorage('bb_posts', firestorePosts);
+    });
 
-    setUsers(loadedUsers);
-    setPosts(loadedPosts);
-    setStories(loadedStories);
-    setPayments(loadedPayments);
-    setMessages(loadedMessages);
-    setExecutives(loadedExecutives);
-    setNotifications(loadedNotifications);
-    setReports(loadedReports);
+    // 4. Subscribe to Stories
+    const unsubStories = subscribeStories((firestoreStories) => {
+      setStories(firestoreStories);
+      saveToStorage('bb_stories', firestoreStories);
+    });
 
-    // Initial state is guest visitor mode (currentUser null)
-    setCurrentUser(null);
+    // 5. Subscribe to Executives
+    const unsubExecs = subscribeExecutives((firestoreExecs) => {
+      setExecutives(firestoreExecs);
+      saveToStorage('bb_executives', firestoreExecs);
+    });
+
+    // 6. Subscribe to Payments Queue
+    const unsubPayments = subscribePayments((firestorePayments) => {
+      setPayments(firestorePayments);
+      saveToStorage('bb_payments', firestorePayments);
+    });
+
+    // 7. Subscribe to Reports
+    const unsubReports = subscribeReports((firestoreReports) => {
+      setReports(firestoreReports);
+      saveToStorage('bb_reports', firestoreReports);
+    });
+
+    // 8. Subscribe to Notifications
+    const unsubNotifications = subscribeNotifications((firestoreNotifs) => {
+      setNotifications(firestoreNotifs);
+      saveToStorage('bb_notifications', firestoreNotifs);
+    });
+
+    // 9. Subscribe to Messages
+    const unsubMessages = subscribeChats((firestoreMsgs) => {
+      setMessages(firestoreMsgs);
+      saveToStorage('bb_messages', firestoreMsgs);
+    });
+
+    return () => {
+      unsubUsers();
+      unsubPosts();
+      unsubStories();
+      unsubExecs();
+      unsubPayments();
+      unsubReports();
+      unsubNotifications();
+      unsubMessages();
+    };
   }, []);
 
   // Save collections helper
@@ -136,9 +192,7 @@ export default function App() {
       timestamp: new Date().toISOString(),
     };
 
-    const updated = [newPost, ...posts];
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
+    savePostInFirestore(newPost);
   };
 
   const handleEditPost = (
@@ -149,35 +203,27 @@ export default function App() {
     music?: { id?: string; title: string; artist: string; audioUrl?: string; coverUrl?: string }
   ) => {
     if (!currentUser) return;
-    const updated = posts.map(p => {
-      if (p.id === postId && p.userId === currentUser.id) {
-        return { ...p, content, image, location, music };
-      }
-      return p;
-    });
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
+    const target = posts.find(p => p.id === postId && p.userId === currentUser.id);
+    if (target) {
+      const updatedPost = { ...target, content, image, location, music };
+      savePostInFirestore(updatedPost);
+    }
   };
 
   const handleDeletePost = (postId: string) => {
     if (!currentUser) return;
-    const updated = posts.filter(p => p.id !== postId);
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
+    deletePostInFirestore(postId);
   };
 
   const handleDeleteStory = (storyId: string) => {
     if (!currentUser) return;
-    const updated = stories.filter(s => s.id !== storyId);
-    setStories(updated);
-    saveToStorage('bb_stories', updated);
+    deleteStoryInFirestore(storyId);
   };
 
   const handleDeleteAllStories = () => {
     if (!currentUser) return;
-    const updated = stories.filter(s => s.userId !== currentUser.id);
-    setStories(updated);
-    saveToStorage('bb_stories', updated);
+    const userStories = stories.filter(s => s.userId === currentUser.id);
+    userStories.forEach(s => deleteStoryInFirestore(s.id));
   };
 
   const handleAddStory = (
@@ -198,56 +244,41 @@ export default function App() {
       viewedBy: [],
     };
 
-    const updated = [newStory, ...stories];
-    setStories(updated);
-    saveToStorage('bb_stories', updated);
+    saveStoryInFirestore(newStory);
   };
 
   const handleSharePost = (postId: string) => {
-    const updated = posts.map(p => {
-      if (p.id === postId) {
-        return { ...p, shares: p.shares + 1 };
-      }
-      return p;
-    });
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
-    alert('পোস্টটি সফলভাবে আপনার ফিডে শেয়ার করা হয়েছে!');
+    const target = posts.find(p => p.id === postId);
+    if (target) {
+      const updated = { ...target, shares: target.shares + 1 };
+      savePostInFirestore(updated);
+      alert('পোস্টটি সফলভাবে আপনার ফিডে শেয়ার করা হয়েছে!');
+    }
   };
 
   const handleReactStory = (storyId: string, reactionType: 'like' | 'love') => {
     if (!currentUser) return;
-    const updated = stories.map(s => {
-      if (s.id === storyId) {
-        const existing = s.reactions || [];
-        const filtered = existing.filter(r => r.userId !== currentUser.id);
-        const newReaction = {
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userAvatar: currentUser.profilePicture,
-          type: reactionType,
-        };
-        return { ...s, reactions: [...filtered, newReaction] };
-      }
-      return s;
-    });
-    setStories(updated);
-    saveToStorage('bb_stories', updated);
+    const target = stories.find(s => s.id === storyId);
+    if (target) {
+      const existing = target.reactions || [];
+      const filtered = existing.filter(r => r.userId !== currentUser.id);
+      const newReaction = {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.profilePicture,
+        type: reactionType,
+      };
+      const updatedStory = { ...target, reactions: [...filtered, newReaction] };
+      saveStoryInFirestore(updatedStory);
+    }
   };
 
   const handleViewStory = (storyId: string) => {
     if (!currentUser) return;
-    let changed = false;
-    const updated = stories.map(s => {
-      if (s.id === storyId && !s.viewedBy.includes(currentUser.id)) {
-        changed = true;
-        return { ...s, viewedBy: [...s.viewedBy, currentUser.id] };
-      }
-      return s;
-    });
-    if (changed) {
-      setStories(updated);
-      saveToStorage('bb_stories', updated);
+    const target = stories.find(s => s.id === storyId);
+    if (target && !target.viewedBy.includes(currentUser.id)) {
+      const updatedStory = { ...target, viewedBy: [...target.viewedBy, currentUser.id] };
+      saveStoryInFirestore(updatedStory);
     }
   };
 
@@ -256,80 +287,69 @@ export default function App() {
     const updatedGallery = [photoUrl, ...currentUser.galleryPhotos];
     const updatedUser = { ...currentUser, galleryPhotos: updatedGallery };
     setCurrentUser(updatedUser);
-
-    const updatedUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-    setUsers(updatedUsers);
-    saveToStorage('bb_users', updatedUsers);
+    saveUserInFirestore(updatedUser);
   };
 
   const handleToggleLike = (postId: string, reactionType: 'like' | 'love') => {
     if (!currentUser) return;
-    const updated = posts.map((p) => {
-      if (p.id === postId) {
-        let updatedLikes = [...p.likes];
-        let updatedLoves = [...p.loves];
+    const target = posts.find(p => p.id === postId);
+    if (target) {
+      let updatedLikes = [...target.likes];
+      let updatedLoves = [...target.loves];
 
-        if (reactionType === 'like') {
-          if (updatedLikes.includes(currentUser.id)) {
-            updatedLikes = updatedLikes.filter((id) => id !== currentUser.id);
-          } else {
-            updatedLikes.push(currentUser.id);
-            // Remove love reaction if active
-            updatedLoves = updatedLoves.filter((id) => id !== currentUser.id);
-          }
+      if (reactionType === 'like') {
+        if (updatedLikes.includes(currentUser.id)) {
+          updatedLikes = updatedLikes.filter((id) => id !== currentUser.id);
         } else {
-          if (updatedLoves.includes(currentUser.id)) {
-            updatedLoves = updatedLoves.filter((id) => id !== currentUser.id);
-          } else {
-            updatedLoves.push(currentUser.id);
-            // Remove like reaction if active
-            updatedLikes = updatedLikes.filter((id) => id !== currentUser.id);
-          }
+          updatedLikes.push(currentUser.id);
+          updatedLoves = updatedLoves.filter((id) => id !== currentUser.id);
         }
-
-        return { ...p, likes: updatedLikes, loves: updatedLoves };
+      } else {
+        if (updatedLoves.includes(currentUser.id)) {
+          updatedLoves = updatedLoves.filter((id) => id !== currentUser.id);
+        } else {
+          updatedLoves.push(currentUser.id);
+          updatedLikes = updatedLikes.filter((id) => id !== currentUser.id);
+        }
       }
-      return p;
-    });
 
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
+      const updatedPost = { ...target, likes: updatedLikes, loves: updatedLoves };
+      savePostInFirestore(updatedPost);
+    }
   };
 
   const handleAddComment = (postId: string, commentText: string, parentCommentId?: string) => {
     if (!currentUser) return;
-    const updated = posts.map((p) => {
-      if (p.id === postId) {
-        const newComment: Comment = {
-          id: `comment-${Date.now()}`,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userAvatar: currentUser.profilePicture,
-          content: commentText,
-          timestamp: new Date().toISOString(),
-          replies: [],
-        };
+    const target = posts.find(p => p.id === postId);
+    if (target) {
+      const newComment: Comment = {
+        id: `comment-${Date.now()}`,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.profilePicture,
+        content: commentText,
+        timestamp: new Date().toISOString(),
+        replies: [],
+      };
 
-        if (!parentCommentId) {
-          return { ...p, comments: [...p.comments, newComment] };
-        } else {
-          const updatedComments = p.comments.map((c) => {
-            if (c.id === parentCommentId) {
-              return {
-                ...c,
-                replies: [...(c.replies || []), newComment],
-              };
-            }
-            return c;
-          });
-          return { ...p, comments: updatedComments };
-        }
+      let updatedComments: Comment[];
+      if (!parentCommentId) {
+        updatedComments = [...target.comments, newComment];
+      } else {
+        updatedComments = target.comments.map((c) => {
+          if (c.id === parentCommentId) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment],
+            };
+          }
+          return c;
+        });
       }
-      return p;
-    });
 
-    setPosts(updated);
-    saveToStorage('bb_posts', updated);
+      const updatedPost = { ...target, comments: updatedComments };
+      savePostInFirestore(updatedPost);
+    }
   };
 
   // --------------------------------------------------
@@ -347,44 +367,30 @@ export default function App() {
       seen: false,
     };
 
-    const updated = [...messages, newMsg];
-    setMessages(updated);
-    saveToStorage('bb_messages', updated);
+    saveChatMessageInFirestore(newMsg);
 
     // Notify receiving user
-    const updatedNotifs = [
-      {
-        id: `notif-${Date.now()}`,
-        userId: receiverId,
-        title: `New message from ${currentUser.name}`,
-        titleBn: `${currentUser.name} থেকে নতুন বার্তা`,
-        content: `"${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
-        contentBn: `"${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
-        type: 'message' as const,
-        timestamp: new Date().toISOString(),
-        read: false,
-      },
-      ...notifications,
-    ];
-    setNotifications(updatedNotifs);
-    saveToStorage('bb_notifications', updatedNotifs);
+    const newNotif = {
+      id: `notif-${Date.now()}`,
+      userId: receiverId,
+      title: `New message from ${currentUser.name}`,
+      titleBn: `${currentUser.name} থেকে নতুন বার্তা`,
+      content: `"${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+      contentBn: `"${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+      type: 'message' as const,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    saveNotificationInFirestore(newNotif);
   };
 
   const handleMarkMessagesSeen = (partnerId: string) => {
     if (!currentUser) return;
-    let changed = false;
-    const updated = messages.map((m) => {
+    messages.forEach((m) => {
       if (m.senderId === partnerId && m.receiverId === currentUser.id && !m.seen) {
-        changed = true;
-        return { ...m, seen: true };
+        saveChatMessageInFirestore({ ...m, seen: true });
       }
-      return m;
     });
-
-    if (changed) {
-      setMessages(updated);
-      saveToStorage('bb_messages', updated);
-    }
   };
 
   const handleOpenDirectChat = (targetUser: User) => {
@@ -403,143 +409,103 @@ export default function App() {
   // BILLING & ADMIN PANEL ACTIONS
   // --------------------------------------------------
   const handleApprovePayment = (paymentId: string) => {
-    // 1. Update Payment Record status to approved
-    const updatedPayments = payments.map((p) => {
-      if (p.id === paymentId) {
-        return { ...p, status: 'approved' as const };
-      }
-      return p;
-    });
-    setPayments(updatedPayments);
-    saveToStorage('bb_payments', updatedPayments);
-
-    // Get the payment to find profile ID
     const payment = payments.find((p) => p.id === paymentId);
-    if (payment) {
-      // 2. Find and update associated user status to verified
-      const updatedUsers = users.map((u) => {
-        if (u.profileId === payment.profileId) {
-          const isVip = payment.membershipPackage === 'vip';
-          const isPremium = payment.membershipPackage === 'premium';
-          const activationPin = Math.floor(100000 + Math.random() * 900000).toString();
-          const serialNumber = 'BB-SN-' + Math.floor(10000000 + Math.random() * 90000000).toString();
-          return { 
-            ...u, 
-            status: 'verified' as const, 
-            isVIP: isVip, 
-            isPremium: isVip || isPremium,
-            verificationDate: new Date().toLocaleDateString(),
-            activationPin,
-            serialNumber
-          };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-      saveToStorage('bb_users', updatedUsers);
+    if (!payment) return;
 
-      // If approved user is the current user, update state instantly
-      const updatedProfile = updatedUsers.find(u => u.profileId === payment.profileId);
-      if (updatedProfile && currentUser?.id === updatedProfile.id) {
-        setCurrentUser(updatedProfile);
+    // 1. Update Payment Record status to approved
+    const updatedPayment = { ...payment, status: 'approved' as const };
+    savePaymentInFirestore(updatedPayment);
+
+    // 2. Find and update associated user status to verified
+    const targetUser = users.find((u) => u.profileId === payment.profileId);
+    if (targetUser) {
+      const isVip = payment.membershipPackage === 'vip';
+      const isPremium = payment.membershipPackage === 'premium';
+      const activationPin = Math.floor(100000 + Math.random() * 900000).toString();
+      const serialNumber = 'BB-SN-' + Math.floor(10000000 + Math.random() * 90000000).toString();
+
+      const updatedUser: User = {
+        ...targetUser,
+        status: 'verified' as const,
+        isVIP: isVip,
+        isPremium: isVip || isPremium,
+        verificationDate: new Date().toLocaleDateString(),
+        activationPin,
+        serialNumber
+      };
+      saveUserInFirestore(updatedUser);
+
+      if (currentUser?.id === updatedUser.id) {
+        setCurrentUser(updatedUser);
       }
 
       // 3. Fire approval system notification to the user
-      const targetUser = users.find((u) => u.profileId === payment.profileId);
-      if (targetUser) {
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          userId: targetUser.id,
-          title: `Account Activated & Verified!`,
-          titleBn: `অ্যাকাউন্ট অ্যাক্টিভেট এবং ভেরিফাইড!`,
-          content: `Your payment was successfully approved by the admin. Your profile is now live.`,
-          contentBn: `আপনার পেমেন্টটি অ্যাডমিন দ্বারা অনুমোদিত হয়েছে। আপনার বায়োডাটা এখন লাইভ রয়েছে।`,
-          type: 'payment' as const,
-          timestamp: new Date().toISOString(),
-          read: false,
-        };
-        const newNotifications = [newNotif, ...notifications];
-        setNotifications(newNotifications);
-        saveToStorage('bb_notifications', newNotifications);
-      }
+      const newNotif: Notification = {
+        id: `notif-${Date.now()}`,
+        userId: targetUser.id,
+        title: `Account Activated & Verified!`,
+        titleBn: `অ্যাকাউন্ট অ্যাক্টিভেট এবং ভেরিফাইড!`,
+        content: `Your payment was successfully approved by the admin. Your profile is now live.`,
+        contentBn: `আপনার পেমেন্টটি অ্যাডমিন দ্বারা অনুমোদিত হয়েছে। আপনার বায়োডাটা এখন লাইভ রয়েছে।`,
+        type: 'payment' as const,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      saveNotificationInFirestore(newNotif);
     }
   };
 
   const handleRejectPayment = (paymentId: string, reason: string) => {
+    const payment = payments.find((p) => p.id === paymentId);
+    if (!payment) return;
+
     // Update Payment Record status to rejected
-    const updatedPayments = payments.map((p) => {
-      if (p.id === paymentId) {
-        return { ...p, status: 'rejected' as const, rejectionReason: reason };
-      }
-      return p;
-    });
-    setPayments(updatedPayments);
-    saveToStorage('bb_payments', updatedPayments);
+    const updatedPayment = { ...payment, status: 'rejected' as const, rejectionReason: reason };
+    savePaymentInFirestore(updatedPayment);
 
     // Suspend the associated user account
-    const payment = payments.find((p) => p.id === paymentId);
-    if (payment) {
-      const updatedUsers = users.map((u) => {
-        if (u.profileId === payment.profileId || u.mobileNumber === payment.userMobile) {
-          return { ...u, status: 'suspended' as UserStatus };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-      saveToStorage('bb_users', updatedUsers);
+    const targetUser = users.find((u) => u.profileId === payment.profileId || u.mobileNumber === payment.userMobile);
+    if (targetUser) {
+      const updatedUser: User = { ...targetUser, status: 'suspended' as UserStatus };
+      saveUserInFirestore(updatedUser);
 
-      if (currentUser && (currentUser.profileId === payment.profileId || currentUser.mobileNumber === payment.userMobile)) {
-        setCurrentUser({ ...currentUser, status: 'suspended' });
+      if (currentUser && currentUser.id === targetUser.id) {
+        setCurrentUser(updatedUser);
       }
 
       // Fire rejection & suspension notification
-      const targetUser = users.find((u) => u.profileId === payment.profileId || u.mobileNumber === payment.userMobile);
-      if (targetUser) {
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          userId: targetUser.id,
-          title: `Payment Invalid / Account Suspended`,
-          titleBn: `পেমেন্ট অকার্যকর / অ্যাকাউন্ট স্থগিত করা হয়েছে (Suspended)`,
-          content: `Rejection reason: ${reason}. Your account has been suspended due to invalid payment verification. Please re-submit payment.`,
-          contentBn: `কারণ: ${reason}। আপনার পেমেন্ট যাচাই ব্যর্থ হওয়ায় অ্যাকাউন্ট সাময়িকভাবে স্থগিত করা হয়েছে। অনুগ্রহ করে পুনরায় সঠিক ট্রানজেকশন আইডি প্রদান করুন।`,
-          type: 'payment' as const,
-          timestamp: new Date().toISOString(),
-          read: false,
-        };
-        const newNotifications = [newNotif, ...notifications];
-        setNotifications(newNotifications);
-        saveToStorage('bb_notifications', newNotifications);
-      }
+      const newNotif: Notification = {
+        id: `notif-${Date.now()}`,
+        userId: targetUser.id,
+        title: `Payment Invalid / Account Suspended`,
+        titleBn: `পেমেন্ট অকার্যকর / অ্যাকাউন্ট স্থগিত করা হয়েছে (Suspended)`,
+        content: `Rejection reason: ${reason}. Your account has been suspended due to invalid payment verification. Please re-submit payment.`,
+        contentBn: `কারণ: ${reason}। আপনার পেমেন্ট যাচাই ব্যর্থ হওয়ায় অ্যাকাউন্ট সাময়িকভাবে স্থগিত করা হয়েছে। অনুগ্রহ করে পুনরায় সঠিক ট্রানজেকশন আইডি প্রদান করুন।`,
+        type: 'payment' as const,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      saveNotificationInFirestore(newNotif);
     }
   };
 
   const handleAddExecutive = (newExec: Executive) => {
-    const updated = [newExec, ...executives];
-    setExecutives(updated);
-    saveToStorage('bb_executives', updated);
+    saveExecutiveInFirestore(newExec);
   };
 
   const handleUpdateExecutive = (updatedExec: Executive) => {
-    const updated = executives.map((e) => (e.id === updatedExec.id ? updatedExec : e));
-    setExecutives(updated);
-    saveToStorage('bb_executives', updated);
+    saveExecutiveInFirestore(updatedExec);
   };
 
   const handleDeleteExecutive = (execId: string) => {
-    const updated = executives.filter((e) => e.id !== execId);
-    setExecutives(updated);
-    saveToStorage('bb_executives', updated);
+    deleteExecutiveInFirestore(execId);
   };
 
   const handleToggleExecutiveStatus = (execId: string) => {
-    const updated = executives.map((e) => {
-      if (e.id === execId) {
-        return { ...e, isActive: !e.isActive };
-      }
-      return e;
-    });
-    setExecutives(updated);
-    saveToStorage('bb_executives', updated);
+    const exec = executives.find(e => e.id === execId);
+    if (exec) {
+      saveExecutiveInFirestore({ ...exec, isActive: !exec.isActive });
+    }
   };
 
   const handleResolveReport = (
@@ -569,19 +535,15 @@ export default function App() {
 
     // Update user status if suspend or ban
     if (action === 'ban' || action === 'suspend') {
-      const updatedUsers = users.map((u) => {
-        if (u.id === report.reportedUserId || u.profileId === report.reportedUserProfileId) {
-          return { ...u, status: 'rejected' as const };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-      saveToStorage('bb_users', updatedUsers);
+      const reportedUser = users.find(u => u.id === report.reportedUserId || u.profileId === report.reportedUserProfileId);
+      if (reportedUser) {
+        saveUserInFirestore({ ...reportedUser, status: 'rejected' as const });
+      }
     }
 
     // Send notification if warning
     if (action === 'warning') {
-      const warningNotif = {
+      const warningNotif: Notification = {
         id: `notif-warn-${Date.now()}`,
         userId: report.reportedUserId,
         title: 'Security Warning / সতর্কবার্তা',
@@ -592,31 +554,20 @@ export default function App() {
         timestamp: new Date().toISOString(),
         read: false
       };
-      const updatedNotifs = [warningNotif, ...notifications];
-      setNotifications(updatedNotifs);
-      saveToStorage('bb_notifications', updatedNotifs);
+      saveNotificationInFirestore(warningNotif);
     }
 
-    // Update reports list
-    const updatedReports = reports.map((r) => {
-      if (r.id === reportId) {
-        return {
-          ...r,
-          status: updatedReportStatus,
-          actionLogs: [newLog, ...(r.actionLogs || [])]
-        };
-      }
-      return r;
-    });
-
-    setReports(updatedReports);
-    saveToStorage('bb_reports', updatedReports);
+    // Update report
+    const updatedReport: ReportRecord = {
+      ...report,
+      status: updatedReportStatus,
+      actionLogs: [newLog, ...(report.actionLogs || [])]
+    };
+    saveReportInFirestore(updatedReport);
   };
 
   const handleDeleteReport = (reportId: string) => {
-    const updatedReports = reports.filter((r) => r.id !== reportId);
-    setReports(updatedReports);
-    saveToStorage('bb_reports', updatedReports);
+    deleteReportInFirestore(reportId);
   };
 
   const handleReportUser = (
@@ -645,9 +596,7 @@ export default function App() {
       status: 'pending',
     };
 
-    const updatedReports = [newReport, ...reports];
-    setReports(updatedReports);
-    saveToStorage('bb_reports', updatedReports);
+    saveReportInFirestore(newReport);
   };
 
   // --------------------------------------------------
@@ -655,71 +604,58 @@ export default function App() {
   // --------------------------------------------------
   const handleToggleFollow = (targetId: string) => {
     if (!currentUser) return;
-    
-    const updatedUsers = users.map((u) => {
-      if (u.id === currentUser.id) {
-        const following = [...u.following];
-        if (following.includes(targetId)) {
-          return { ...u, following: following.filter((id) => id !== targetId) };
-        } else {
-          return { ...u, following: [...following, targetId] };
-        }
-      }
-      if (u.id === targetId) {
-        const followers = [...u.followers];
-        if (followers.includes(currentUser.id)) {
-          return { ...u, followers: followers.filter((id) => id !== currentUser.id) };
-        } else {
-          return { ...u, followers: [...followers, currentUser.id] };
-        }
-      }
-      return u;
-    });
 
-    setUsers(updatedUsers);
-    saveToStorage('bb_users', updatedUsers);
+    const targetUser = users.find(u => u.id === targetId);
+    if (!targetUser) return;
 
-    // Update active currentUser reference
-    const freshCurrentUser = updatedUsers.find((u) => u.id === currentUser.id);
-    if (freshCurrentUser) setCurrentUser(freshCurrentUser);
+    // Toggle current user following
+    const currFollowing = [...currentUser.following];
+    const newCurrFollowing = currFollowing.includes(targetId)
+      ? currFollowing.filter(id => id !== targetId)
+      : [...currFollowing, targetId];
+    const updatedCurrUser = { ...currentUser, following: newCurrFollowing };
 
-    // Update selected profile view reference
-    const freshTargetUser = updatedUsers.find((u) => u.id === targetId);
-    if (freshTargetUser) setSelectedProfile(freshTargetUser);
+    // Toggle target user followers
+    const targetFollowers = [...targetUser.followers];
+    const newTargetFollowers = targetFollowers.includes(currentUser.id)
+      ? targetFollowers.filter(id => id !== currentUser.id)
+      : [...targetFollowers, currentUser.id];
+    const updatedTargetUser = { ...targetUser, followers: newTargetFollowers };
+
+    setCurrentUser(updatedCurrUser);
+    setSelectedProfile(updatedTargetUser);
+
+    saveUserInFirestore(updatedCurrUser);
+    saveUserInFirestore(updatedTargetUser);
   };
 
   const handleSendInterest = (targetId: string) => {
     if (!currentUser) return;
 
-    const updatedUsers = users.map((u) => {
-      if (u.id === currentUser.id) {
-        const sent = [...u.interestsSent];
-        if (!sent.includes(targetId)) {
-          return { ...u, interestsSent: [...sent, targetId] };
-        }
-      }
-      if (u.id === targetId) {
-        const received = [...u.interestsReceived];
-        if (!received.includes(currentUser.id)) {
-          return { ...u, interestsReceived: [...received, currentUser.id] };
-        }
-      }
-      return u;
-    });
+    const targetUser = users.find(u => u.id === targetId);
+    if (!targetUser) return;
 
-    setUsers(updatedUsers);
-    saveToStorage('bb_users', updatedUsers);
+    // Send interest
+    const currSent = [...currentUser.interestsSent];
+    if (!currSent.includes(targetId)) {
+      currSent.push(targetId);
+    }
+    const updatedCurrUser = { ...currentUser, interestsSent: currSent };
 
-    // Update active currentUser reference
-    const freshCurrentUser = updatedUsers.find((u) => u.id === currentUser.id);
-    if (freshCurrentUser) setCurrentUser(freshCurrentUser);
+    const targetReceived = [...targetUser.interestsReceived];
+    if (!targetReceived.includes(currentUser.id)) {
+      targetReceived.push(currentUser.id);
+    }
+    const updatedTargetUser = { ...targetUser, interestsReceived: targetReceived };
 
-    // Update selected profile view reference
-    const freshTargetUser = updatedUsers.find((u) => u.id === targetId);
-    if (freshTargetUser) setSelectedProfile(freshTargetUser);
+    setCurrentUser(updatedCurrUser);
+    setSelectedProfile(updatedTargetUser);
+
+    saveUserInFirestore(updatedCurrUser);
+    saveUserInFirestore(updatedTargetUser);
 
     // Notify receiving candidate
-    const newNotif = {
+    const newNotif: Notification = {
       id: `notif-${Date.now()}`,
       userId: targetId,
       title: `You received a matching Interest!`,
@@ -730,81 +666,48 @@ export default function App() {
       timestamp: new Date().toISOString(),
       read: false,
     };
-    const updatedNotifs = [newNotif, ...notifications];
-    setNotifications(updatedNotifs);
-    saveToStorage('bb_notifications', updatedNotifs);
+    saveNotificationInFirestore(newNotif);
   };
 
   const markNotificationsAsRead = () => {
     if (!currentUser) return;
-    const updated = notifications.map((n) => {
-      if (n.userId === currentUser.id) {
-        return { ...n, read: true };
+    notifications.forEach((n) => {
+      if (n.userId === currentUser.id && !n.read) {
+        saveNotificationInFirestore({ ...n, read: true });
       }
-      return n;
     });
-    setNotifications(updated);
-    saveToStorage('bb_notifications', updated);
   };
 
   // --------------------------------------------------
   // GUEST REGISTRATION COMPLETED CALLBACK & PENDING PAYMENTS
   // --------------------------------------------------
   const handleSavePendingPayment = (payment: PaymentRecord) => {
-    // Check if record exists by transactionId
-    const existingIdx = payments.findIndex((p) => p.transactionId.toUpperCase() === payment.transactionId.toUpperCase());
-    let updatedPayments: PaymentRecord[];
-    if (existingIdx >= 0) {
-      updatedPayments = [...payments];
-      updatedPayments[existingIdx] = { ...updatedPayments[existingIdx], ...payment };
-    } else {
-      updatedPayments = [payment, ...payments];
-    }
-    setPayments(updatedPayments);
-    saveToStorage('bb_payments', updatedPayments);
+    savePaymentInFirestore(payment);
   };
 
   const handleDeletePaymentRecord = (paymentId: string) => {
     const payment = payments.find((p) => p.id === paymentId);
     if (payment) {
-      const updatedUsers = users.map((u) => {
-        if (u.profileId === payment.profileId || u.mobileNumber === payment.userMobile) {
-          return { ...u, status: 'suspended' as UserStatus };
-        }
-        return u;
-      });
-      setUsers(updatedUsers);
-      saveToStorage('bb_users', updatedUsers);
-
-      if (currentUser && (currentUser.profileId === payment.profileId || currentUser.mobileNumber === payment.userMobile)) {
-        setCurrentUser({ ...currentUser, status: 'suspended' });
+      const targetUser = users.find((u) => u.profileId === payment.profileId || u.mobileNumber === payment.userMobile);
+      if (targetUser) {
+        saveUserInFirestore({ ...targetUser, status: 'suspended' as UserStatus });
       }
     }
-
-    const updatedPayments = payments.filter((p) => p.id !== paymentId);
-    setPayments(updatedPayments);
-    saveToStorage('bb_payments', updatedPayments);
+    deletePaymentInFirestore(paymentId);
   };
 
   const handleRegisterComplete = (newUser: User, initialPayment: PaymentRecord) => {
-    // 1. Add user to users
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    saveToStorage('bb_users', updatedUsers);
+    // 1. Save user to Firestore
+    saveUserInFirestore(newUser);
 
-    // 2. Remove any incomplete registration pending record with same transactionId or profileId
-    const cleanedPayments = payments.filter(
-      (p) => p.transactionId.toUpperCase() !== initialPayment.transactionId.toUpperCase() && p.profileId !== initialPayment.profileId
-    );
-    const updatedPayments = [initialPayment, ...cleanedPayments];
-    setPayments(updatedPayments);
-    saveToStorage('bb_payments', updatedPayments);
+    // 2. Save payment record to Firestore
+    savePaymentInFirestore(initialPayment);
 
     // 3. Log user in as currentUser
     setCurrentUser(newUser);
 
-    // 4. Send success notifications
-    const newNotif = {
+    // 4. Send success notification
+    const newNotif: Notification = {
       id: `notif-reg-${Date.now()}`,
       userId: newUser.id,
       title: `Registration Submitted Under Verification`,
@@ -815,9 +718,7 @@ export default function App() {
       timestamp: new Date().toISOString(),
       read: false,
     };
-    const updatedNotifs = [newNotif, ...notifications];
-    setNotifications(updatedNotifs);
-    saveToStorage('bb_notifications', updatedNotifs);
+    saveNotificationInFirestore(newNotif);
 
     // Redirect to newsfeed timeline
     setActiveTab('feed');
@@ -837,28 +738,45 @@ export default function App() {
           
           <form onSubmit={(e) => {
             e.preventDefault();
+            const form = e.target as HTMLFormElement;
+            const nameInput = form.querySelector<HTMLInputElement>('input[name="name"]')?.value || currentUser.name;
+            const professionInput = form.querySelector<HTMLInputElement>('input[name="profession"]')?.value || currentUser.profession;
+            const districtInput = form.querySelector<HTMLInputElement>('input[name="district"]')?.value || currentUser.district;
+            const aboutInput = form.querySelector<HTMLTextAreaElement>('textarea[name="aboutYourself"]')?.value || currentUser.aboutYourself;
+
+            const updatedUser: User = {
+              ...currentUser,
+              name: nameInput,
+              profession: professionInput,
+              district: districtInput,
+              aboutYourself: aboutInput,
+            };
+
+            setCurrentUser(updatedUser);
+            saveUserInFirestore(updatedUser);
+
             alert('প্রোফাইল তথ্য সফলভাবে আপডেট করা হয়েছে!');
             setActiveTab('profile');
           }} className="space-y-4 text-xs font-medium text-neutral-700">
             <div>
               <label className="block text-neutral-500 font-bold mb-1">নাম (Name)</label>
-              <input type="text" defaultValue={currentUser.name} className="w-full p-3 rounded-xl border border-neutral-200" />
+              <input type="text" name="name" defaultValue={currentUser.name} className="w-full p-3 rounded-xl border border-neutral-200" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-neutral-500 font-bold mb-1">পেশা (Profession)</label>
-                <input type="text" defaultValue={currentUser.profession} className="w-full p-3 rounded-xl border border-neutral-200" />
+                <input type="text" name="profession" defaultValue={currentUser.profession} className="w-full p-3 rounded-xl border border-neutral-200" />
               </div>
               <div>
                 <label className="block text-neutral-500 font-bold mb-1">জেলা (District)</label>
-                <input type="text" defaultValue={currentUser.district} className="w-full p-3 rounded-xl border border-neutral-200" />
+                <input type="text" name="district" defaultValue={currentUser.district} className="w-full p-3 rounded-xl border border-neutral-200" />
               </div>
             </div>
 
             <div>
               <label className="block text-neutral-500 font-bold mb-1">সংক্ষিপ্ত পরিচিতি (About Yourself)</label>
-              <textarea rows={4} defaultValue={currentUser.aboutYourself} className="w-full p-3 rounded-xl border border-neutral-200" />
+              <textarea rows={4} name="aboutYourself" defaultValue={currentUser.aboutYourself} className="w-full p-3 rounded-xl border border-neutral-200" />
             </div>
 
             <div className="flex space-x-3 pt-4">
@@ -1155,6 +1073,7 @@ export default function App() {
                 currentUser={currentUser}
                 users={users}
                 executives={executives}
+                stories={stories}
                 onQuickRegister={(num) => {
                   setInitialMobileNumber(num);
                   setActiveTab('register');

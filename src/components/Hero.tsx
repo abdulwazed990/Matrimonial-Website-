@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SUCCESS_STORIES, DISTRICT_LIST, RELIGION_LIST } from '../data';
-import { User, Executive } from '../types';
+import { User, Executive, Story } from '../types';
 import { 
   Heart, 
   Search, 
@@ -38,12 +38,14 @@ interface HeroProps {
   currentUser?: User | null;
   users?: User[];
   executives?: Executive[];
+  stories?: Story[];
   onQuickRegister?: (mobileNumber: string) => void;
   onOpenAdminLoginModal?: () => void;
 }
 
 // Name translation mapping helper
-const translateNameToBangla = (name: string): string => {
+const translateNameToBangla = (name?: string): string => {
+  if (!name) return '';
   const map: Record<string, string> = {
     'Anika Rahman': 'আনিকা রহমান',
     'Sajid Al Hasan': 'সাজিদ আল হাসান',
@@ -358,6 +360,7 @@ export default function Hero({
   currentUser,
   users = [],
   executives = [],
+  stories = [],
   onQuickRegister,
   onOpenAdminLoginModal,
 }: HeroProps) {
@@ -444,11 +447,8 @@ export default function Hero({
     }
   };
 
-  // Success Stories local state loader
-  const [successStories, setSuccessStories] = useState<any[]>(() => {
-    const local = localStorage.getItem('bb_success_stories');
-    return local ? JSON.parse(local) : SUCCESS_STORIES;
-  });
+  // Success Stories from live database or fallback
+  const successStories = stories.length > 0 ? stories : SUCCESS_STORIES;
 
   // Daily Shuffle & Photo viewer state for 17 user-provided new member profiles
   const [shuffleOffset, setShuffleOffset] = useState<number>(0);

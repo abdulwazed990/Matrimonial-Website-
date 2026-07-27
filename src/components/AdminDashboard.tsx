@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { User, PaymentRecord, Executive, PackageType, ReportRecord, ReportActionLog } from '../types';
 import { SEED_REPORTS } from '../data';
+import { compressImageFile } from '../lib/imageCompressor';
+import SafeImage from './SafeImage';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell 
@@ -176,21 +178,20 @@ export default function AdminDashboard({
     setShowExecModal(true);
   };
 
-  const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setFormError('ছবি সর্বোচ্চ ৫ মেগাবাইটের হওয়া আবশ্যক।');
+      if (file.size > 10 * 1024 * 1024) {
+        setFormError('ছবি সর্বোচ্চ ১০ মেগাবাইটের হওয়া আবশ্যক।');
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setFormPhoto(reader.result);
-          setFormError('');
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedDataUrl = await compressImageFile(file, 600, 600, 0.8);
+        setFormPhoto(compressedDataUrl);
+        setFormError('');
+      } catch (err) {
+        setFormError('ছবি প্রসেস করতে সমস্যা হয়েছে।');
+      }
     }
   };
 
@@ -719,7 +720,7 @@ export default function AdminDashboard({
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center space-x-3">
-                        <img src={exec.photo} alt={exec.name} className="h-12 w-12 rounded-full object-cover border-2 border-neutral-200 shrink-0" />
+                        <SafeImage src={exec.photo} alt={exec.name} fallbackText={exec.name} className="h-12 w-12 rounded-full object-cover border-2 border-neutral-200 shrink-0" />
                         <div>
                           <h4 className="font-bold text-neutral-900 text-sm font-serif">{exec.name}</h4>
                           <span className="text-xs text-neutral-500 font-mono block">{exec.designation}</span>
@@ -812,7 +813,7 @@ export default function AdminDashboard({
               return (
                 <div key={`perf-${exec.id}`} className="bg-white border border-neutral-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
                   <div className="flex items-center space-x-3 pb-2 border-b border-neutral-100">
-                    <img src={exec.photo} alt={exec.name} className="h-12 w-12 rounded-full object-cover border border-neutral-300" />
+                    <SafeImage src={exec.photo} alt={exec.name} fallbackText={exec.name} className="h-12 w-12 rounded-full object-cover border border-neutral-300 shrink-0" />
                     <div>
                       <h4 className="font-bold text-neutral-900 text-sm font-serif">{exec.name}</h4>
                       <span className="text-xs font-mono text-red-800 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200">
