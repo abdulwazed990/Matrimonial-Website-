@@ -1,6 +1,9 @@
 {
   "name": "BibahoBondhon – Matrimony Bangladesh",
+  "short_name": "BibahoBondhon",
   "description": "BibahoBondhon is a trusted Bangladeshi matrimonial platform where verified brides and grooms can connect safely and find their life partner.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b91c1c"
 }

@@ -10,6 +10,7 @@ import SearchMatches from './components/SearchMatches';
 import ProfileDetails from './components/ProfileDetails';
 import CreatePost from './components/CreatePost';
 import MobileNavBar from './components/MobileNavBar';
+import AutoUpdateChecker from './components/AutoUpdateChecker';
 
 import { User, Post, Story, PaymentRecord, ChatMessage, Executive, Notification, PackageType, Comment, ReportRecord, ReportActionLog, MembershipPackage, UserStatus } from './types';
 import { SEED_USERS, SEED_POSTS, SEED_STORIES, SEED_EXECUTIVES, MEMBERSHIP_PACKAGES, SEED_REPORTS } from './data';
@@ -1825,6 +1826,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Automatic Update & Cache-Busting Detector */}
+      <AutoUpdateChecker />
 
       {/* Persistent Mobile Bottom Navigation Bar */}
       <MobileNavBar
