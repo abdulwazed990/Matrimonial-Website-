@@ -45,13 +45,15 @@ export async function seedInitialFirestoreData() {
     const batch = writeBatch(db);
     let shouldCommit = false;
 
-    // 1. Check Executives
-    const execSnap = await getDocs(collection(db, 'executives'));
-    if (execSnap.empty && SEED_EXECUTIVES.length > 0) {
-      SEED_EXECUTIVES.forEach((exec) => {
-        batch.set(doc(db, 'executives', exec.id), sanitizeForFirestore(exec));
-      });
-      shouldCommit = true;
+    // 1. Check & Clean up any old seed executives
+    const oldExecIds = ['exec-wazed', 'exec-1', 'exec-2', 'exec-3', 'exec-rahim', 'exec-akash', 'exec-tania'];
+    for (const oldId of oldExecIds) {
+      const oldDocRef = doc(db, 'executives', oldId);
+      const oldSnap = await getDoc(oldDocRef);
+      if (oldSnap.exists()) {
+        batch.delete(oldDocRef);
+        shouldCommit = true;
+      }
     }
 
     // 2. Check Posts
@@ -249,6 +251,20 @@ export async function saveExecutiveInFirestore(exec: Executive) {
 export async function deleteExecutiveInFirestore(execId: string) {
   if (!execId) return;
   await deleteDoc(doc(db, 'executives', execId));
+}
+
+export async function clearAllExecutivesInFirestore() {
+  try {
+    const snap = await getDocs(collection(db, 'executives'));
+    const batch = writeBatch(db);
+    snap.forEach((docSnap) => {
+      batch.delete(docSnap.ref);
+    });
+    await batch.commit();
+    console.log('Firebase: All executives cleared from database.');
+  } catch (error) {
+    console.error('Error clearing executives from Firestore:', error);
+  }
 }
 
 export async function savePaymentInFirestore(payment: PaymentRecord) {

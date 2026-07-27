@@ -33,6 +33,7 @@ import {
   deleteStoryInFirestore,
   saveExecutiveInFirestore,
   deleteExecutiveInFirestore,
+  clearAllExecutivesInFirestore,
   savePaymentInFirestore,
   deletePaymentInFirestore,
   saveReportInFirestore,
@@ -526,6 +527,16 @@ export default function App() {
       await deleteExecutiveInFirestore(execId);
     } catch (err) {
       console.error('Error deleting executive from Firestore:', err);
+    }
+  };
+
+  const handleClearAllExecutives = async () => {
+    setExecutives([]);
+    saveToStorage('bb_executives', []);
+    try {
+      await clearAllExecutivesInFirestore();
+    } catch (err) {
+      console.error('Error clearing all executives in Firestore:', err);
     }
   };
 
@@ -1223,6 +1234,7 @@ export default function App() {
                 onAddExecutive={handleAddExecutive}
                 onUpdateExecutive={handleUpdateExecutive}
                 onDeleteExecutive={handleDeleteExecutive}
+                onClearAllExecutives={handleClearAllExecutives}
                 onToggleExecutiveStatus={handleToggleExecutiveStatus}
                 onResolveReport={handleResolveReport}
                 onDeleteReport={handleDeleteReport}

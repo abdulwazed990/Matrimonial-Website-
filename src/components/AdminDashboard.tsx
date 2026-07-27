@@ -26,6 +26,7 @@ interface AdminDashboardProps {
   onAddExecutive: (newExec: Executive) => void;
   onUpdateExecutive?: (updatedExec: Executive) => void;
   onDeleteExecutive?: (execId: string) => void;
+  onClearAllExecutives?: () => void;
   onToggleExecutiveStatus: (execId: string) => void;
   onResolveReport?: (reportId: string, action: 'dismiss' | 'warning' | 'suspend' | 'ban' | 'remove_content' | 'investigating', note?: string) => void;
   onDeleteReport?: (reportId: string) => void;
@@ -43,6 +44,7 @@ export default function AdminDashboard({
   onAddExecutive,
   onUpdateExecutive,
   onDeleteExecutive,
+  onClearAllExecutives,
   onToggleExecutiveStatus,
   onResolveReport,
   onDeleteReport,
@@ -692,6 +694,20 @@ export default function AdminDashboard({
             </div>
 
             <div className="flex items-center space-x-2 w-full sm:w-auto">
+              {executives.length > 0 && onClearAllExecutives && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('আপনি কি নিশ্চিত যে সকল এক্সিকিউটিভ ডেটা স্থায়ীভাবে ডাটাবেস থেকে মুছে ফেলতে চান?')) {
+                      onClearAllExecutives();
+                    }
+                  }}
+                  className="py-2 px-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold text-xs uppercase rounded-xl transition-all flex items-center space-x-1 font-mono cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>সব মুছে ফেলুন (Clear All)</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setIsExecutiveUnlocked(false)}
                 className="py-2 px-3 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 font-bold text-xs uppercase rounded-xl transition-all flex items-center space-x-1 font-mono cursor-pointer"
