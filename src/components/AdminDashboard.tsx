@@ -285,38 +285,86 @@ export default function AdminDashboard({
           </p>
         </div>
         
-        {/* Scrollable Sub-tabs Navigation for Mobile */}
-        <div className="flex overflow-x-auto gap-2 pb-2 pt-2 scrollbar-none border-t border-neutral-800 -mx-1 px-1">
-          {[
-            { id: 'analytics', label: '📊 ওভারভিউ', badge: null, locked: false },
-            { id: 'executives', label: '👔 এক্সিকিউটিভ', badge: totalExecsCount, locked: !isExecutiveUnlocked },
-            { id: 'performance', label: '📈 পারফরম্যান্স', badge: null, locked: false },
-            { id: 'system_regs', label: '🌐 সিস্টেম রেজিস্ট্রেশন', badge: systemRegsUsers.length, locked: false },
-            { id: 'payments', label: '💳 পেমেন্ট কিউ', badge: pendingPaymentsCount > 0 ? pendingPaymentsCount : null, locked: !isExecutiveUnlocked },
-            { id: 'reports', label: '🛡️ রিপোর্ট', badge: activeReports.length > 0 ? activeReports.length : null, locked: false },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveSubTab(tab.id as any);
-                setExecPasswordError('');
-              }}
-              className={`py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl text-xs font-bold transition-all duration-150 uppercase tracking-wider font-mono cursor-pointer flex items-center space-x-1.5 whitespace-nowrap shrink-0 ${
-                activeSubTab === tab.id
-                  ? 'bg-red-700 text-white shadow-md'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-              }`}
-            >
-              {tab.locked && <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
-              <span>{tab.label}</span>
-              {tab.badge !== null && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${activeSubTab === tab.id ? 'bg-white text-red-900' : 'bg-red-900 text-red-100'}`}>
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* RESPONSIVE ADMIN NAVIGATION GRID FOR MOBILE & DESKTOP */}
+        <div className="pt-3 border-t border-neutral-800 space-y-2">
+          <div className="flex items-center justify-between text-xs text-neutral-400 font-mono pb-1">
+            <span className="font-bold text-neutral-300">অ্যাডমিন নেভিগেশন মেনু ({6} টি অপশন)</span>
+            <span className="text-[11px] text-red-400 font-semibold md:hidden">মোবাইল অপটিমাইজড 📱</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2">
+            {[
+              { id: 'analytics', label: 'ওভারভিউ', shortLabel: 'ওভারভিউ', icon: '📊', badge: null, locked: false },
+              { id: 'executives', label: 'এক্সিকিউটিভ', shortLabel: 'এক্সিকিউটিভ', icon: '👔', badge: totalExecsCount, locked: !isExecutiveUnlocked },
+              { id: 'performance', label: 'পারফরম্যান্স', shortLabel: 'পারফরম্যান্স', icon: '📈', badge: null, locked: false },
+              { id: 'system_regs', label: 'সিস্টেম রেজিস্ট্রেশন', shortLabel: 'রেজিস্ট্রেশন', icon: '🌐', badge: systemRegsUsers.length, locked: false },
+              { id: 'payments', label: 'পেমেন্ট কিউ', shortLabel: 'পেমেন্ট কিউ', icon: '💳', badge: pendingPaymentsCount > 0 ? pendingPaymentsCount : null, locked: !isExecutiveUnlocked },
+              { id: 'reports', label: 'রিপোর্ট সেন্টার', shortLabel: 'রিপোর্ট', icon: '🛡️', badge: activeReports.length > 0 ? activeReports.length : null, locked: false },
+            ].map(tab => {
+              const isActive = activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveSubTab(tab.id as any);
+                    setExecPasswordError('');
+                  }}
+                  className={`min-h-[46px] w-full md:w-auto py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-150 uppercase tracking-wider font-mono cursor-pointer flex items-center justify-center md:justify-start space-x-1.5 shadow-xs border ${
+                    isActive
+                      ? 'bg-red-700 border-red-500 text-white shadow-md ring-2 ring-red-500/30'
+                      : 'bg-neutral-800/90 border-neutral-700/80 text-neutral-200 hover:bg-neutral-700/90 hover:border-neutral-600'
+                  }`}
+                >
+                  <span className="text-sm shrink-0">{tab.icon}</span>
+                  {tab.locked && <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
+                  <span className="truncate text-center md:text-left">
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="inline sm:hidden">{tab.shortLabel}</span>
+                  </span>
+                  {tab.badge !== null && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
+                      isActive ? 'bg-white text-red-900' : 'bg-red-900 text-red-100 border border-red-700'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      {/* QUICK MOBILE SECTION BAR (Sticky selector when scrolling on small screens) */}
+      <div className="md:hidden sticky top-16 z-30 bg-neutral-900/95 backdrop-blur-md text-white border border-neutral-800 rounded-2xl p-2.5 shadow-xl flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 text-xs font-mono text-neutral-300 truncate pl-1">
+          <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
+          <span className="text-neutral-400 text-[10px] uppercase block">বর্তমান সেকশন:</span>
+          <strong className="text-white font-extrabold truncate">
+            {activeSubTab === 'analytics' && '📊 ওভারভিউ'}
+            {activeSubTab === 'executives' && '👔 এক্সিকিউটিভ'}
+            {activeSubTab === 'performance' && '📈 পারফরম্যান্স'}
+            {activeSubTab === 'system_regs' && '🌐 রেজিস্ট্রেশন'}
+            {activeSubTab === 'payments' && '💳 পেমেন্ট কিউ'}
+            {activeSubTab === 'reports' && '🛡️ রিপোর্ট'}
+          </strong>
+        </div>
+
+        <select
+          value={activeSubTab}
+          onChange={(e) => {
+            setActiveSubTab(e.target.value as any);
+            setExecPasswordError('');
+          }}
+          className="bg-red-800 border border-red-600 text-white font-mono font-bold text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-400 cursor-pointer shrink-0"
+        >
+          <option value="analytics">📊 ওভারভিউ</option>
+          <option value="executives">👔 এক্সিকিউটিভ {!isExecutiveUnlocked ? '🔒' : ''}</option>
+          <option value="performance">📈 পারফরম্যান্স</option>
+          <option value="system_regs">🌐 রেজিস্ট্রেশন ({systemRegsUsers.length})</option>
+          <option value="payments">💳 পেমেন্ট কিউ {pendingPaymentsCount > 0 ? `(${pendingPaymentsCount})` : ''} {!isExecutiveUnlocked ? '🔒' : ''}</option>
+          <option value="reports">🛡️ রিপোর্ট ({activeReports.length})</option>
+        </select>
       </div>
 
       {/* TAB 1: OVERVIEW & 12 AT-A-GLANCE KPIS */}
