@@ -489,22 +489,60 @@ export default function App() {
     }
   };
 
-  const handleAddExecutive = (newExec: Executive) => {
-    saveExecutiveInFirestore(newExec);
+  const handleAddExecutive = async (newExec: Executive) => {
+    setExecutives((prev) => {
+      const exists = prev.some((e) => e.id === newExec.id);
+      const next = exists ? prev.map((e) => (e.id === newExec.id ? newExec : e)) : [...prev, newExec];
+      saveToStorage('bb_executives', next);
+      return next;
+    });
+    try {
+      await saveExecutiveInFirestore(newExec);
+    } catch (err) {
+      console.error('Error saving executive to Firestore:', err);
+    }
   };
 
-  const handleUpdateExecutive = (updatedExec: Executive) => {
-    saveExecutiveInFirestore(updatedExec);
+  const handleUpdateExecutive = async (updatedExec: Executive) => {
+    setExecutives((prev) => {
+      const next = prev.map((e) => (e.id === updatedExec.id ? updatedExec : e));
+      saveToStorage('bb_executives', next);
+      return next;
+    });
+    try {
+      await saveExecutiveInFirestore(updatedExec);
+    } catch (err) {
+      console.error('Error updating executive in Firestore:', err);
+    }
   };
 
-  const handleDeleteExecutive = (execId: string) => {
-    deleteExecutiveInFirestore(execId);
+  const handleDeleteExecutive = async (execId: string) => {
+    setExecutives((prev) => {
+      const next = prev.filter((e) => e.id !== execId);
+      saveToStorage('bb_executives', next);
+      return next;
+    });
+    try {
+      await deleteExecutiveInFirestore(execId);
+    } catch (err) {
+      console.error('Error deleting executive from Firestore:', err);
+    }
   };
 
-  const handleToggleExecutiveStatus = (execId: string) => {
+  const handleToggleExecutiveStatus = async (execId: string) => {
     const exec = executives.find(e => e.id === execId);
     if (exec) {
-      saveExecutiveInFirestore({ ...exec, isActive: !exec.isActive });
+      const updated = { ...exec, isActive: !exec.isActive };
+      setExecutives((prev) => {
+        const next = prev.map((e) => (e.id === execId ? updated : e));
+        saveToStorage('bb_executives', next);
+        return next;
+      });
+      try {
+        await saveExecutiveInFirestore(updated);
+      } catch (err) {
+        console.error('Error toggling executive status in Firestore:', err);
+      }
     }
   };
 

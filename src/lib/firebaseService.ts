@@ -2,6 +2,7 @@ import {
   db,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   setDoc,
   deleteDoc,
@@ -29,41 +30,56 @@ function sanitizeForFirestore<T>(obj: T): any {
   return obj;
 }
 
-// Ensure initial seed data exists if Firestore collection is completely empty
+// Ensure initial seed data exists ONCE across database lifecycle
 export async function seedInitialFirestoreData() {
   try {
+    const metaRef = doc(db, 'system_metadata', 'initial_seed');
+    const metaSnap = await getDoc(metaRef);
+
+    // If initial seed has already been completed for this database, never seed again!
+    if (metaSnap.exists()) {
+      console.log('Firebase: Database initial seed already completed. Skipping seed.');
+      return;
+    }
+
+    const batch = writeBatch(db);
+    let shouldCommit = false;
+
     // 1. Check Executives
     const execSnap = await getDocs(collection(db, 'executives'));
     if (execSnap.empty && SEED_EXECUTIVES.length > 0) {
-      const batch = writeBatch(db);
       SEED_EXECUTIVES.forEach((exec) => {
         batch.set(doc(db, 'executives', exec.id), sanitizeForFirestore(exec));
       });
-      await batch.commit();
-      console.log('Firebase: Initial Executives seeded successfully.');
+      shouldCommit = true;
     }
 
     // 2. Check Posts
     const postsSnap = await getDocs(collection(db, 'posts'));
     if (postsSnap.empty && SEED_POSTS.length > 0) {
-      const batch = writeBatch(db);
       SEED_POSTS.forEach((post) => {
         batch.set(doc(db, 'posts', post.id), sanitizeForFirestore(post));
       });
-      await batch.commit();
-      console.log('Firebase: Initial Posts seeded successfully.');
+      shouldCommit = true;
     }
 
     // 3. Check Stories
     const storiesSnap = await getDocs(collection(db, 'stories'));
     if (storiesSnap.empty && SEED_STORIES.length > 0) {
-      const batch = writeBatch(db);
       SEED_STORIES.forEach((story) => {
         batch.set(doc(db, 'stories', story.id), sanitizeForFirestore(story));
       });
-      await batch.commit();
-      console.log('Firebase: Initial Stories seeded successfully.');
+      shouldCommit = true;
     }
+
+    // Always record that the initial seed step was executed so it never runs again
+    batch.set(metaRef, {
+      seededAt: new Date().toISOString(),
+      completed: true
+    });
+
+    await batch.commit();
+    console.log('Firebase: Initial database seed completed ONCE.');
   } catch (error) {
     console.error('Error seeding initial Firestore data:', error);
   }

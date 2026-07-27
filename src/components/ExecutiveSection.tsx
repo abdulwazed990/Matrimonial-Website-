@@ -44,8 +44,16 @@ export default function ExecutiveSection({ language, executives, users = [], pay
       </div>
 
       {/* DIRECTORY GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {activeExecutives.map((exec) => (
+      {activeExecutives.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-3xl border border-neutral-200/80 p-8 shadow-xs max-w-md mx-auto space-y-3">
+          <Award className="h-10 w-10 text-neutral-300 mx-auto" />
+          <p className="text-sm sm:text-base text-neutral-600 font-bold font-serif">
+            {language === 'en' ? 'No active executives registered at this time.' : 'বর্তমানে কোনো সক্রিয় এক্সিকিউটিভ নেই।'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {activeExecutives.map((exec) => (
           <div 
             key={exec.id} 
             className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-neutral-300 transition-all duration-300 flex flex-col justify-between items-center text-center group relative overflow-hidden"
@@ -141,6 +149,7 @@ export default function ExecutiveSection({ language, executives, users = [], pay
           </div>
         ))}
       </div>
+      )}
 
       {/* GALLERY MODAL */}
       {activeGalleryExec && (
